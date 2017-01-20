@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
-#import csv as csv
+import csv as csv
 import matplotlib.pyplot as plt
+
+
+from sklearn.linear_model import LogisticRegression
 
 
 # get the training data
@@ -70,14 +73,3 @@ print("percentage who survived in third class: ",percentageSurvivedClass3)
 #plt.show()
 
 
-# get the test data
-df_test = pd.read_csv('test.csv', header=0)        # Load the train file into a dataframe
-
-
-# change the sex info same way as in the train data
-df_test['Sex'] = df_test['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
-
-
-#put data to x and y vectors
-#xWeight = df.iloc[:,0].values
-#xWeight = xWeight.reshape(len(xWeight),1)
