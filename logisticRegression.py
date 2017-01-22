@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 
 from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
+from sklearn import cross_validation
+
+from sklearn.ensemble import RandomForestClassifier
+
 
 # get the training data
 df = pd.read_csv('train.csv', header=0)        # Load the train file into a dataframe
@@ -20,22 +24,51 @@ df.Age[df.Age.isnull()] = train_mean_age
 df.Embarked[df.Embarked.isnull()] = 'S'
 
 # convert embarked info to int
-df['Embarked'] = df['Embarked'].map({'S':0, 'Q':-1, 'C':1}).astype(int)
+df['Embarked'] = df['Embarked'].map({'S':-1, 'Q':0, 'C':1}).astype(int)
 
 
 train_sex = df['Sex'].values
 train_class = df['Pclass'].values
 train_age = df['Age'].values
 train_embarked = df['Embarked'].values
-
+train_fare = df['Fare'].values
+train_parents = df['Parch'].values
+train_siblings = df['SibSp'].values
 
 #rescale the age to the mean with unit variance
 train_mean_age = np.mean(train_age)
 train_var_age = np.var(train_age)
 train_age = 1.*(train_age - train_mean_age)/train_var_age
 
+#rescale the age to the mean with unit variance
+train_mean_fare = np.mean(train_fare)
+train_var_fare = np.var(train_fare)
+train_fare = 1.*(train_fare-train_mean_fare)/train_var_fare
 
 train_survival = df['Survived'].values
+
+#put siblings to 0s or 1s
+train_siblings[np.where(train_siblings >1)] = 1
+
+#put parents to 0s or 1s
+train_parents[np.where(train_parents >1)] = 1
+
+
+
+predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
+
+reg = LogisticRegression(random_state=None)
+#reg = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
+
+scores = cross_validation.cross_val_score(
+    reg,
+    df[predictors],
+    df["Survived"],
+    cv=3
+)
+
+print(scores.mean())
+
 
 # Concatenate all relevant data in an X array
 X = np.stack((train_sex, train_class, train_age, train_embarked), axis = 1)
@@ -44,6 +77,7 @@ X = np.stack((train_sex, train_class, train_age, train_embarked), axis = 1)
 logistic = LogisticRegression()
 logistic.fit(X,train_survival)
 
+print(logistic.coef_)
 
 
 
@@ -63,16 +97,31 @@ df_test.Age[df_test.Age.isnull()] = mean_age
 df_test.Embarked[df_test.Embarked.isnull()] = 'S'
 
 # convert embarked info to int
-df_test['Embarked'] = df_test['Embarked'].map({'S':0, 'Q':-1, 'C':1}).astype(int)
+df_test['Embarked'] = df_test['Embarked'].map({'S':-1, 'Q':0, 'C':1}).astype(int)
 
-
+# put non existing fare to mean value
+mean_fare = df_test['Fare'].dropna().mean()
+df_test.Fare[df_test.Fare.isnull()] = mean_fare
 
 test_sex = df_test['Sex'].values
 test_class = df_test['Pclass'].values
 test_age = df_test['Age'].values
 test_embarked = df_test['Embarked'].values
+test_fare = df_test['Fare'].values
+test_parents = df_test['Parch'].values
+test_siblings = df_test['SibSp'].values
+
 #rescale the same way the test age
 test_age = 1.*(test_age - train_mean_age)/train_var_age
+
+#rescale the age to the mean with unit variance
+test_fare = 1.*(test_fare-train_mean_fare)/train_var_fare
+
+#put siblings to 0s or 1s
+test_siblings[np.where(test_siblings >1)] = 1
+
+#put parents to 0s or 1s
+test_parents[np.where(test_parents >1)] = 1
 
 
 # get the relevant info as the training data
@@ -84,7 +133,7 @@ print 'Predicting...'
 output = logistic.predict(Xtest)
 
 # write down the prediction in a csv file as needed by kaggle
-predictions_file = open("myfirstLogisticRegression.csv", "wb")
+predictions_file = open("myLogisticRegression.csv", "wb")
 open_file_object = csv.writer(predictions_file)
 open_file_object.writerow(["PassengerId","Survived"])
 open_file_object.writerows(zip(ids, output))
