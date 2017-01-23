@@ -145,17 +145,16 @@ print("percentage who survived From Queenstown: ", percentageSurvivedFromQ)
 
 
 
-### play with the names, WIP
-# map the titles as Mister : 0, Miss : 1, Mistress : 2, Others : 3
-#df.Name[0].split()[1]
+### play with the names to get the titles
+# map the titles as Mister : 0, Mistress : 1, Miss : 2, Others : 3
 title = []
 for name in df.Name:
   tmp = name.split(',')[1].split()[0]
   if tmp == 'Mr.' :
     title.append(0)
-  elif tmp == 'Miss.':
+  elif tmp == 'Mrs.':
     title.append(1)
-  elif tmp == 'Mrs.' :
+  elif tmp == 'Miss.' :
     title.append(2)
   else :
     title.append(3)

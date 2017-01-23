@@ -54,30 +54,49 @@ train_siblings[np.where(train_siblings >1)] = 1
 train_parents[np.where(train_parents >1)] = 1
 
 
-
-predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
-
-reg = LogisticRegression(random_state=None)
-#reg = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
-
-scores = cross_validation.cross_val_score(
-    reg,
-    df[predictors],
-    df["Survived"],
-    cv=3
-)
-
-print(scores.mean())
+### play with the names to get the titles
+# map the titles as Mister : 0, Mistress : 1, Miss : 2, Others : 3
+title = []
+for name in df.Name:
+  tmp = name.split(',')[1].split()[0]
+  if tmp == 'Mr.' :
+    title.append(0)
+  elif tmp == 'Mrs.':
+    title.append(1)
+  elif tmp == 'Miss.' :
+    title.append(2)
+  else :
+    title.append(3)
 
 
 # Concatenate all relevant data in an X array
-X = np.stack((train_sex, train_class, train_age, train_embarked), axis = 1)
+X = np.stack((train_sex, train_class, train_age, train_embarked, train_parents, train_siblings, train_fare, title), axis = 1)
 
 # Perform the logistic regression
 logistic = LogisticRegression()
 logistic.fit(X,train_survival)
 
 print(logistic.coef_)
+
+
+
+
+
+predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
+
+"""
+#reg = LogisticRegression(random_state=None)
+reg = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
+
+scores = cross_validation.cross_val_score(
+    reg,
+    X, #df[predictors],
+    train_survival, #df["Survived"],
+    cv=3
+)
+
+print(scores.mean())
+"""
 
 
 
@@ -123,9 +142,21 @@ test_siblings[np.where(test_siblings >1)] = 1
 #put parents to 0s or 1s
 test_parents[np.where(test_parents >1)] = 1
 
+# map the titles as Mister : 0, Mistress : 1, Miss : 2, Others : 3
+title = []
+for name in df_test.Name:
+  tmp = name.split(',')[1].split()[0]
+  if tmp == 'Mr.' :
+    title.append(0)
+  elif tmp == 'Mrs.':
+    title.append(1)
+  elif tmp == 'Miss.' :
+    title.append(2)
+  else :
+    title.append(3)
 
 # get the relevant info as the training data
-Xtest = np.stack((test_sex, test_class, test_age, test_embarked), axis = 1)
+Xtest = np.stack((test_sex, test_class, test_age, test_embarked, test_parents, test_siblings, test_fare, title), axis = 1)
 
 print 'Predicting...'
 
