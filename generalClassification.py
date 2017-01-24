@@ -4,6 +4,8 @@ import csv as csv
 import matplotlib.pyplot as plt
 
 from sklearn.linear_model import LogisticRegression
+from sklearn import svm
+
 from sklearn import preprocessing
 from sklearn import cross_validation
 
@@ -20,18 +22,11 @@ def makeupdata(df):
   # make unknown embarked from Cherbourg
   df.Embarked[df.Embarked.isnull()] = 'C'
 
+  # put a reasonable value to the missing fare
+  df.Fare[df.Fare.isnull()] = 8.
+
   # convert embarked info to int
   df['Embarked'] = df['Embarked'].map({'S':-1, 'Q':0, 'C':1}).astype(int)
-
-  #rescale the age to the mean with unit variance
-  mean_age = np.mean(df['Age'])
-  var_age = np.var(df['Age'])
-  df['Age'] = 1.*(df['Age'] - mean_age)/var_age
-
-  #rescale the age to the mean with unit variance
-  mean_fare = np.mean(df['Fare'])
-  var_fare = np.var(df['Fare'])
-  df['Fare'] = 1.*(df['Fare']-mean_fare)/var_fare
 
   #put siblings to 0s or 1s
 #  df['SibSp'][np.where(df['SibSp'] > 1)] = 1
@@ -41,17 +36,15 @@ def makeupdata(df):
 
   ### play with the names to get the titles
   # map the titles as Mister : 0, Mistress : 1, Miss : 2, Others : 3
-  title = []
-  for name in df.Name:
-    tmp = name.split(',')[1].split()[0]
-    if tmp == 'Mr.' :
-      title.append(0)
-    elif tmp == 'Mrs.':
-      title.append(1)
-    elif tmp == 'Miss.' :
-      title.append(2)
+  for i in range(len(df.Name)):
+    if df.Name[i].split(',')[1].split()[0] == 'Mr.':
+      df.Name[i] = 0
+    elif df.Name[i].split(',')[1].split()[0] == 'Mrs.':
+      df.Name[i] = 1
+    elif df.Name[i].split(',')[1].split()[0] == 'Miss.':
+      df.Name[i] = 2
     else :
-      title.append(3)
+      df.Name[i] = 3
 
   return df
 
@@ -59,46 +52,37 @@ def rescaleData (df_train, df_test):
   
   # all sex info are correctly filled up, change them to 0 and 1
   fullDf = pd.concat([df_train, df_test], axis = 0)
-  fullDf['Sex'] = fullDf['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
-  # some ages are not given, give them the mean age
-  mean_age = fullDf['Age'].dropna().mean()
-  fullDf.Age[fullDf.Age.isnull()] = mean_age
-
-  # make unknown embarked from Cherbourg
-  fullDf.Embarked[fullDf.Embarked.isnull()] = 'C'
-
-  # convert embarked info to int
-  fullDf['Embarked'] = fullDf['Embarked'].map({'S':-1, 'Q':0, 'C':1}).astype(int)
 
   #rescale the age to the mean with unit variance
   mean_age = np.mean(fullDf['Age'])
   var_age = np.var(fullDf['Age'])
-  fullDf['Age'] = 1.*(fullDf['Age'] - mean_age)/var_age
 
-  #rescale the age to the mean with unit variance
-  mean_fare = np.mean(fullDf['Fare'])
+  df_train['Age'] = 1.*(df_train['Age'] - mean_age)/var_age
+  df_test['Age'] = 1.*(df_test['Age'] - mean_age)/var_age
+
+  #rescale the fare to the mean with unit variance
+  median_fare = np.median(fullDf['Fare'])
   var_fare = np.var(fullDf['Fare'])
-  fullDf['Fare'] = 1.*(fullDf['Fare']-mean_fare)/var_fare
+  df_train['Fare'] = 1.*(df_train['Fare'] - median_fare)/var_fare
+  df_test['Fare'] = 1.*(df_test['Fare'] - median_fare)/var_fare
 
-  #put siblings to 0s or 1s
-#  fullDf['SibSp'][np.where(fullDf['SibSp'] > 1)] = 1
 
-  #put parents to 0s or 1s
-#  fullDf['Parch'][np.where(fullDf['SibSp'] > 1)] = 1
+  return df_train, df_test
 
-  ### play with the names to get the titles
-  # map the titles as Mister : 0, Mistress : 1, Miss : 2, Others : 3
-  title = []
-  for name in fullDf.Name:
-    tmp = name.split(',')[1].split()[0]
-    if tmp == 'Mr.' :
-      title.append(0)
-    elif tmp == 'Mrs.':
-      title.append(1)
-    elif tmp == 'Miss.' :
-      title.append(2)
-    else :
-      title.append(3)
+
+
+# get the training data
+df = pd.read_csv('train.csv', header=0)        # Load the train file into a dataframe
+
+# get the test data
+df_test = pd.read_csv('test.csv', header=0)        # Load the train file into a dataframe
+
+# fill missing data, and rescale features when needed
+df = makeupdata(df)
+df_test = makeupdata(df_test)
+df, df_test = rescaleData(df, df_test)
+
+#print(df)
 
 
 
@@ -120,33 +104,49 @@ scores = cross_validation.cross_val_score(
 print(scores.mean())
 """
 
-
-# get the training data
-df = pd.read_csv('train.csv', header=0)        # Load the train file into a dataframe
-
-# get the test data
-df_test = pd.read_csv('test.csv', header=0)        # Load the train file into a dataframe
-
-predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked","Name"]
-
-
-df = makeupdata(df)
-
-
-print(df)
-
-
-
-
-# Concatenate all relevant data in an X array
-#X = np.stack((train_sex, train_class, train_age, train_embarked, train_parents, train_siblings, train_fare, title), axis = 1)
+predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Name"]
 
 # Perform the logistic regression
-logistic = LogisticRegression()
-logistic.fit(X,train_survival)
+logistic = LogisticRegression(max_iter = 200, random_state = None)
+logistic.fit(df[predictors],df["Survived"])
+#print(logistic.coef_)
 
-print(logistic.coef_)
+scores = cross_validation.cross_val_score(
+    logistic,
+    df[predictors],
+    df["Survived"],
+    cv=3
+)
 
+print("scores for logistic regression: ", scores.mean())
+
+
+# Perform the random forest classification
+rf = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
+rf.fit(df[predictors],df["Survived"])
+
+scores = cross_validation.cross_val_score(
+    rf,
+    df[predictors],
+    df["Survived"],
+    cv=3
+)
+
+print("scores for random forest: ", scores.mean())
+
+
+
+svmclassifier = svm.SVC(kernel='rbf', max_iter=-1, random_state=None)
+svmclassifier.fit(df[predictors],df["Survived"])
+
+scores = cross_validation.cross_val_score(
+    svmclassifier,
+    df[predictors],
+    df["Survived"],
+    cv=3
+)
+
+print("scores for svm: ", scores.mean())
 
 
 
@@ -155,20 +155,33 @@ print(logistic.coef_)
 ids = df_test['PassengerId'].values
 
 
-# get the relevant info as the training data
-Xtest = np.stack((test_sex, test_class, test_age, test_embarked, test_parents, test_siblings, test_fare, title), axis = 1)
 
 print 'Predicting...'
 
-# perform the prediction
-output = logistic.predict(Xtest)
+# perform the predictions
+predictionLogistic = logistic.predict(df_test[predictors])
+predictionRandomForest = rf.predict(df_test[predictors])
+predictionSVM = svmclassifier.predict(df_test[predictors])
 
-# write down the prediction in a csv file as needed by kaggle
-predictions_file = open("myLogisticRegression.csv", "wb")
-open_file_object = csv.writer(predictions_file)
-open_file_object.writerow(["PassengerId","Survived"])
-open_file_object.writerows(zip(ids, output))
-predictions_file.close()
+# make an average prediction
+averagePrediction = 1./3*(predictionLogistic + predictionRandomForest + predictionSVM)
+averagePrediction[np.where(averagePrediction<=0.5)] = 0
+averagePrediction[np.where(averagePrediction>0.5)] = 1
+
+# write down the general predictions in a csv file to check out
+generalpredictions_file = open("myGeneralPredictions.csv", "wb")
+open_file_object = csv.writer(generalpredictions_file)
+open_file_object.writerow(["PassengerId","SurvivedLogistic","SurvivedRandomForest","SurvivedSVM" ])
+open_file_object.writerows(zip(ids, predictionLogistic, predictionRandomForest, predictionSVM))
+generalpredictions_file.close()
+
+# write down the final predictions in a csv file as needed by kaggle
+generalpredictions_file = open("myFinalPredictions.csv", "wb")
+open_file_object = csv.writer(generalpredictions_file)
+open_file_object.writerow(["PassengerId","Survived" ])
+open_file_object.writerows(zip(ids, averagePrediction))
+generalpredictions_file.close()
+
 print 'Done.'
 
 #put data to x and y vectors
