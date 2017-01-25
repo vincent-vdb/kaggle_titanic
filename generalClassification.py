@@ -11,6 +11,8 @@ from sklearn import cross_validation
 
 from sklearn.ensemble import RandomForestClassifier
 
+#from sklearn.neural_network import MLPClassifier
+
 
 def makeupdata(df):
   # all sex info are correctly filled up, change them to 0 and 1
@@ -135,7 +137,7 @@ scores = cross_validation.cross_val_score(
 print("scores for random forest: ", scores.mean())
 
 
-
+# Perform the SVM classification
 svmclassifier = svm.SVC(kernel='rbf', max_iter=-1, random_state=None)
 svmclassifier.fit(df[predictors],df["Survived"])
 
@@ -146,14 +148,20 @@ scores = cross_validation.cross_val_score(
     cv=3
 )
 
-print("scores for svm: ", scores.mean())
+print("scores for SVM: ", scores.mean())
 
 
+#NN = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(10, 10), random_state=1)
+#NN.fit(df[predictors],df["Survived"])
 
+#scores = cross_validation.cross_val_score(
+#    NN,
+#    df[predictors],
+#    df["Survived"],
+#    cv=3
+#)
 
-
-ids = df_test['PassengerId'].values
-
+#print("scores for NN: ", scores.mean())
 
 
 print 'Predicting...'
@@ -162,13 +170,30 @@ print 'Predicting...'
 predictionLogistic = logistic.predict(df_test[predictors])
 predictionRandomForest = rf.predict(df_test[predictors])
 predictionSVM = svmclassifier.predict(df_test[predictors])
+#predictionNN = NN.predict(df_test[predictors])
 
 # make an average prediction
 averagePrediction = 1./3*(predictionLogistic + predictionRandomForest + predictionSVM)
-averagePrediction[np.where(averagePrediction<=0.5)] = 0
-averagePrediction[np.where(averagePrediction>0.5)] = 1
+
+averagePrediction[np.where(averagePrediction<=0.1)] = 0
+averagePrediction[np.where(averagePrediction>0.9)] = 1
+
+print(np.where(averagePrediction == 0))
+print(np.where(averagePrediction == 1))
+
+# provides 0.77990
+#averagePrediction[np.where(averagePrediction == 1./3)] = 1
+#averagePrediction[np.where(averagePrediction == 2./3)] = 0
+
+
+# provides 0.77990
+averagePrediction[np.where(averagePrediction == 1./3)] = 0
+averagePrediction[np.where(averagePrediction == 2./3)] = 1
+
+# but changes 52 values of side...
 
 # write down the general predictions in a csv file to check out
+ids = df_test['PassengerId'].values
 generalpredictions_file = open("myGeneralPredictions.csv", "wb")
 open_file_object = csv.writer(generalpredictions_file)
 open_file_object.writerow(["PassengerId","SurvivedLogistic","SurvivedRandomForest","SurvivedSVM" ])
