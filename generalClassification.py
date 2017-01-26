@@ -14,6 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 #from sklearn.neural_network import MLPClassifier
 
 
+#function to make up the date (fill in the blanks and make features more easy to use)
 def makeupdata(df):
   # all sex info are correctly filled up, change them to 0 and 1
   df['Sex'] = df['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
@@ -50,6 +51,7 @@ def makeupdata(df):
 
   return df
 
+# function to rescale the data
 def rescaleData (df_train, df_test):
   
   # all sex info are correctly filled up, change them to 0 and 1
@@ -72,6 +74,65 @@ def rescaleData (df_train, df_test):
   return df_train, df_test
 
 
+# function to perform logistic regression, random forest classification and SVM classification
+def performClassifications(X, Y):
+
+  # Perform the logistic regression
+  logistic = LogisticRegression(max_iter = 1000, random_state = None)
+  logistic.fit(X,Y)
+  #print(logistic.coef_)
+
+  scores = cross_validation.cross_val_score(
+      logistic,
+      X,
+      Y,
+      cv=3
+  )
+
+  print("scores for logistic regression: ", scores.mean())
+
+
+  # Perform the random forest classification
+  rf = RandomForestClassifier(random_state=None, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
+  rf.fit(X,Y)
+
+  scores = cross_validation.cross_val_score(
+      rf,
+      X,
+      Y,
+      cv=3
+  )
+
+  print("scores for random forest: ", scores.mean())
+
+
+  # Perform the SVM classification
+  svmclassifier = svm.SVC(kernel='rbf', max_iter=-1, random_state=None)
+  svmclassifier.fit(X,Y)
+
+  scores = cross_validation.cross_val_score(
+      svmclassifier,
+      X,
+      Y,
+      cv=3
+  )
+
+  print("scores for SVM: ", scores.mean())
+
+
+  return logistic, rf, svmclassifier
+
+#NN = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(10, 10), random_state=1)
+#NN.fit(df[predictors],df["Survived"])
+
+#scores = cross_validation.cross_val_score(
+#    NN,
+#    df[predictors],
+#    df["Survived"],
+#    cv=3
+#)
+
+#print("scores for NN: ", scores.mean())
 
 # get the training data
 df = pd.read_csv('train.csv', header=0)        # Load the train file into a dataframe
@@ -86,87 +147,54 @@ df, df_test = rescaleData(df, df_test)
 
 #print(df)
 
-
-
-
-
-"""
-predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
-
-#reg = LogisticRegression(random_state=None)
-reg = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
-
-scores = cross_validation.cross_val_score(
-    reg,
-    X, #df[predictors],
-    train_survival, #df["Survived"],
-    cv=3
-)
-
-print(scores.mean())
-"""
-
+# select the features
 predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Name"]
 
-# Perform the logistic regression
-logistic = LogisticRegression(max_iter = 200, random_state = None)
-logistic.fit(df[predictors],df["Survived"])
-#print(logistic.coef_)
+# Perform the classification
+logistic, rf, svmclassifier = performClassifications(df[predictors],df["Survived"])
 
-scores = cross_validation.cross_val_score(
-    logistic,
-    df[predictors],
-    df["Survived"],
-    cv=3
-)
+# perform the first round of predictions
+predictionLogistic = logistic.predict(df[predictors])
+predictionRandomForest = rf.predict(df[predictors])
+predictionSVM = svmclassifier.predict(df[predictors])
+#predictionNN = NN.predict(df_test[predictors])
 
-print("scores for logistic regression: ", scores.mean())
+# make an average prediction
+averagePrediction = 1./3*(predictionLogistic + predictionRandomForest + predictionSVM)
 
 
-# Perform the random forest classification
-rf = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
-rf.fit(df[predictors],df["Survived"])
 
-scores = cross_validation.cross_val_score(
-    rf,
-    df[predictors],
-    df["Survived"],
-    cv=3
-)
+# perform the first round of predictions on test dataset
+predictionLogisticTest = logistic.predict(df_test[predictors])
+predictionRandomForestTest = rf.predict(df_test[predictors])
+predictionSVMTest = svmclassifier.predict(df_test[predictors])
+#predictionNN = NN.predict(df_test[predictors])
 
-print("scores for random forest: ", scores.mean())
+# make an average prediction
+averagePredictionTest = 1./3*(predictionLogisticTest + predictionRandomForestTest + predictionSVMTest)
 
 
-# Perform the SVM classification
-svmclassifier = svm.SVC(kernel='rbf', max_iter=-1, random_state=None)
-svmclassifier.fit(df[predictors],df["Survived"])
-
-scores = cross_validation.cross_val_score(
-    svmclassifier,
-    df[predictors],
-    df["Survived"],
-    cv=3
-)
-
-print("scores for SVM: ", scores.mean())
 
 
-#NN = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(10, 10), random_state=1)
-#NN.fit(df[predictors],df["Survived"])
-
-#scores = cross_validation.cross_val_score(
-#    NN,
-#    df[predictors],
-#    df["Survived"],
-#    cv=3
-#)
-
-#print("scores for NN: ", scores.mean())
 
 
-print 'Predicting...'
+########## Begin the second round of classification and predictions
 
-# perform the predictions
+df['prediction'] = averagePrediction
+predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Name", "prediction"]
+
+print(df)
+
+# Perform the second round of classification using first round prediction
+logistic, rf, svmclassifier = performClassifications(df[predictors],df["Survived"])
+
+
+
+
+### Apply the second round on test dataset
+df_test['prediction'] = averagePredictionTest
+
+# perform the second round of predictions
 predictionLogistic = logistic.predict(df_test[predictors])
 predictionRandomForest = rf.predict(df_test[predictors])
 predictionSVM = svmclassifier.predict(df_test[predictors])
@@ -175,22 +203,24 @@ predictionSVM = svmclassifier.predict(df_test[predictors])
 # make an average prediction
 averagePrediction = 1./3*(predictionLogistic + predictionRandomForest + predictionSVM)
 
-averagePrediction[np.where(averagePrediction<=0.1)] = 0
-averagePrediction[np.where(averagePrediction>0.9)] = 1
+averagePrediction[np.where(averagePrediction<=0.5)] = 0
+averagePrediction[np.where(averagePrediction>0.5)] = 1
 
-print(np.where(averagePrediction == 0))
-print(np.where(averagePrediction == 1))
+#print(np.where(averagePrediction == 0))
+#print(np.where(averagePrediction == 1))
 
+
+
+"""
 # provides 0.77990
 #averagePrediction[np.where(averagePrediction == 1./3)] = 1
 #averagePrediction[np.where(averagePrediction == 2./3)] = 0
 
 
-# provides 0.77990
-averagePrediction[np.where(averagePrediction == 1./3)] = 0
-averagePrediction[np.where(averagePrediction == 2./3)] = 1
-
-# but changes 52 values of side...
+# provides 0.77990 too but changes 52 values of side...
+#averagePrediction[np.where(averagePrediction == 1./3)] = 0
+#averagePrediction[np.where(averagePrediction == 2./3)] = 1
+"""
 
 # write down the general predictions in a csv file to check out
 ids = df_test['PassengerId'].values
@@ -204,11 +234,6 @@ generalpredictions_file.close()
 generalpredictions_file = open("myFinalPredictions.csv", "wb")
 open_file_object = csv.writer(generalpredictions_file)
 open_file_object.writerow(["PassengerId","Survived" ])
-open_file_object.writerows(zip(ids, averagePrediction))
+open_file_object.writerows(zip(ids, averagePrediction.astype(int)))
 generalpredictions_file.close()
 
-print 'Done.'
-
-#put data to x and y vectors
-#xWeight = df.iloc[:,0].values
-#xWeight = xWeight.reshape(len(xWeight),1)
