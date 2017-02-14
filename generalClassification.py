@@ -97,7 +97,7 @@ def performClassifications(X, Y):
 
 
   # Perform the random forest classification
-  rf = RandomForestClassifier(random_state=1, n_estimators=150, min_samples_split=4, min_samples_leaf=2)
+  rf = RandomForestClassifier(random_state=1, n_estimators=200, min_samples_split=2, min_samples_leaf=1, max_depth=4)
   rf.fit(X,Y)
 
   scores = cross_validation.cross_val_score(
@@ -158,52 +158,62 @@ predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Nam
 # Perform the classification
 logistic, rf, svmclassifier = performClassifications(df[predictors],df["Survived"])
 
+# perform the first round of predictions on train dataset
+predictionLogistic = logistic.predict(df[predictors])
+predictionRandomForest = rf.predict(df[predictors])
+predictionSVM = svmclassifier.predict(df[predictors])
+#predictionNN = NN.predict(df[predictors])
+
+# same on test dataset
+predictionLogisticTest = logistic.predict(df_test[predictors])
+predictionRandomForestTest = rf.predict(df_test[predictors])
+predictionSVMTest = svmclassifier.predict(df_test[predictors])
+#predictionNNTest = NN.predict(df_test[predictors])
+
+"""
+# add those predictions to the features of the train dataset
+df['predictionLogistic'] = predictionLogistic
+df['predictionRandomForest'] = predictionRandomForest
+df['predictionSVM'] = predictionSVM
+
+# same on test dataset
+df_test['predictionLogistic'] = predictionLogisticTest
+df_test['predictionRandomForest'] = predictionRandomForestTest
+df_test['predictionSVM'] = predictionSVMTest
 
 
-# make an average prediction
-#averagePrediction = 1./3*(predictionLogistic + predictionRandomForest + predictionSVM)
+# add the predictions to the features
 
 
+for i in range(2):
 
-
-
-for i in range(5):
-  # perform the first round of predictions on train dataset
-  predictionLogistic = logistic.predict(df[predictors])
-  predictionRandomForest = rf.predict(df[predictors])
-  predictionSVM = svmclassifier.predict(df[predictors])
-  #predictionNN = NN.predict(df_test[predictors])
-
-  # add those predictions to the features of the train dataset
-  df['predictionLogistic'] = df.predictionLogistic * predictionLogistic
-  df['predictionRandomForest'] = df['predictionRandomForest']*predictionRandomForest
-  df['predictionSVM'] = df['predictionSVM']*predictionSVM
-
-
-  # perform the prediction on the test dataset too 
-  predictionLogisticTest = logistic.predict(df_test[predictors])
-  predictionRandomForestTest = rf.predict(df_test[predictors])
-  predictionSVMTest = svmclassifier.predict(df_test[predictors])
-  #predictionNN = NN.predict(df_test[predictors])
-
-  # Add those predictions to the features of the test dataset
-  df_test['predictionLogistic'] = df_test['predictionLogistic']*predictionLogisticTest
-  df_test['predictionRandomForest'] = df_test['predictionRandomForest']*predictionRandomForestTest
-  df_test['predictionSVM'] = df_test['predictionSVM']*predictionSVMTest
 
 
   #perform classification using the predictions of previous round classification
-  predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Name", "Fsize", "predictionLogistic", "predictionRandomForest", "predictionSVM"]
   logistic, rf, svmclassifier = performClassifications(df[predictors],df["Survived"])
 
+  # perform the predictions again
+  predictionLogistic = logistic.predict(df[predictors])
+  predictionRandomForest = rf.predict(df[predictors])
+  predictionSVM = svmclassifier.predict(df[predictors])
 
+  # update the features of the train dataset with those predictions
+  df['predictionLogistic'] += predictionLogistic
+  df['predictionRandomForest'] += predictionRandomForest
+  df['predictionSVM'] += predictionSVM
   
+  df['predictionLogistic'] /= 2
+  df['predictionRandomForest'] /= 2
+  df['predictionSVM'] /= 2
+
 
 # perform the prediction on the test dataset too 
 predictionLogisticTest = logistic.predict(df_test[predictors])
 predictionRandomForestTest = rf.predict(df_test[predictors])
 predictionSVMTest = svmclassifier.predict(df_test[predictors])
 #predictionNN = NN.predict(df_test[predictors])
+"""
+
 
 # make an average prediction
 averagePrediction = 1./3*(predictionLogisticTest + predictionRandomForestTest + predictionSVMTest)
@@ -214,18 +224,6 @@ averagePrediction[np.where(averagePrediction>0.5)] = 1
 #print(np.where(averagePrediction == 0))
 #print(np.where(averagePrediction == 1))
 
-
-
-"""
-# provides 0.77990
-#averagePrediction[np.where(averagePrediction == 1./3)] = 1
-#averagePrediction[np.where(averagePrediction == 2./3)] = 0
-
-
-# provides 0.77990 too but changes 52 values of side...
-#averagePrediction[np.where(averagePrediction == 1./3)] = 0
-#averagePrediction[np.where(averagePrediction == 2./3)] = 1
-"""
 
 # write down the general predictions in a csv file to check out
 ids = df_test['PassengerId'].values
@@ -239,6 +237,8 @@ generalpredictions_file.close()
 generalpredictions_file = open("myFinalPredictions.csv", "wb")
 open_file_object = csv.writer(generalpredictions_file)
 open_file_object.writerow(["PassengerId","Survived" ])
+predictionRandomForest
 open_file_object.writerows(zip(ids, averagePrediction.astype(int)))
+#open_file_object.writerows(zip(ids, averagePrediction.astype(int)))
 generalpredictions_file.close()
 
