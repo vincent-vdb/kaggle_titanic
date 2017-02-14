@@ -237,7 +237,6 @@ generalpredictions_file.close()
 generalpredictions_file = open("myFinalPredictions.csv", "wb")
 open_file_object = csv.writer(generalpredictions_file)
 open_file_object.writerow(["PassengerId","Survived" ])
-predictionRandomForest
 open_file_object.writerows(zip(ids, averagePrediction.astype(int)))
 #open_file_object.writerows(zip(ids, averagePrediction.astype(int)))
 generalpredictions_file.close()

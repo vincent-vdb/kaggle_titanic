@@ -3,7 +3,7 @@ import numpy as np
 import csv as csv
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
 from sklearn import preprocessing
 from sklearn import cross_validation
@@ -74,23 +74,22 @@ def rescaleData (df_train, df_test):
 
 
 # function to perform logistic regression, random forest classification and SVM classification
-def performLogisticClassifications(X, Y):
+def performRFClassifications(X, Y):
 
-  # Perform the logistic regression
-  logistic = LogisticRegression(max_iter = 1000, random_state = 1, solver='liblinear')
-  logistic.fit(X,Y)
-  #print(logistic.coef_)
+  # Perform the random forest classification
+  rf = RandomForestClassifier(random_state=1, n_estimators=200, min_samples_split=2, min_samples_leaf=1, max_depth=4)
+  rf.fit(X,Y)
 
   scores = cross_validation.cross_val_score(
-      logistic,
+      rf,
       X,
       Y,
       cv=3
   )
 
-  print("scores for logistic regression: ", scores.mean())
+  print("scores for random forest: ", scores.mean())
 
-  return logistic
+  return rf
 
 
 
@@ -109,10 +108,10 @@ df, df_test = rescaleData(df, df_test)
 
 
 # select the features
-predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Name", "Fsize"]
+predictors = ["PassengerId", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Name", "Fsize"]
 
 # Perform the classification
-logistic = performLogisticClassifications(df[predictors],df["Survived"])
+logistic = performRFClassifications(df[predictors],df["Survived"])
 
 # perform the first round of predictions on train dataset
 predictionLogistic = logistic.predict(df[predictors])
@@ -123,7 +122,7 @@ predictionLogisticTest = logistic.predict(df_test[predictors])
 
 # write down the predictions in a csv file to check out
 ids = df_test['PassengerId'].values
-generalpredictions_file = open("myLogisticPredictions.csv", "wb")
+generalpredictions_file = open("myRFPredictions.csv", "wb")
 open_file_object = csv.writer(generalpredictions_file)
 open_file_object.writerow(["PassengerId","Survived" ])
 open_file_object.writerows(zip(ids, predictionLogisticTest.astype(int)))

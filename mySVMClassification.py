@@ -3,7 +3,7 @@ import numpy as np
 import csv as csv
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import LogisticRegression
+from sklearn import svm
 
 from sklearn import preprocessing
 from sklearn import cross_validation
@@ -74,15 +74,15 @@ def rescaleData (df_train, df_test):
 
 
 # function to perform logistic regression, random forest classification and SVM classification
-def performLogisticClassifications(X, Y):
+def performSVMClassifications(X, Y):
 
   # Perform the logistic regression
-  logistic = LogisticRegression(max_iter = 1000, random_state = 1, solver='liblinear')
-  logistic.fit(X,Y)
+  svmclass = svm.SVC(kernel='rbf', degree = 2, max_iter=-1, random_state=1)
+  svmclass.fit(X,Y)
   #print(logistic.coef_)
 
   scores = cross_validation.cross_val_score(
-      logistic,
+      svmclass,
       X,
       Y,
       cv=3
@@ -90,7 +90,7 @@ def performLogisticClassifications(X, Y):
 
   print("scores for logistic regression: ", scores.mean())
 
-  return logistic
+  return svmclass
 
 
 
@@ -112,7 +112,7 @@ df, df_test = rescaleData(df, df_test)
 predictors = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked", "Name", "Fsize"]
 
 # Perform the classification
-logistic = performLogisticClassifications(df[predictors],df["Survived"])
+logistic = performSVMClassifications(df[predictors],df["Survived"])
 
 # perform the first round of predictions on train dataset
 predictionLogistic = logistic.predict(df[predictors])
@@ -123,7 +123,7 @@ predictionLogisticTest = logistic.predict(df_test[predictors])
 
 # write down the predictions in a csv file to check out
 ids = df_test['PassengerId'].values
-generalpredictions_file = open("myLogisticPredictions.csv", "wb")
+generalpredictions_file = open("mySVMPredictions.csv", "wb")
 open_file_object = csv.writer(generalpredictions_file)
 open_file_object.writerow(["PassengerId","Survived" ])
 open_file_object.writerows(zip(ids, predictionLogisticTest.astype(int)))
