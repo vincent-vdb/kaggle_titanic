@@ -4,6 +4,9 @@ from sklearn.model_selection import cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import scale
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
 
 # get the training data
 df = pd.read_csv('../train.csv', header=0)        # Load the train file into a dataframe
@@ -59,7 +62,9 @@ def parseData(X):
   child = X['Age'] < 8
   features = features.join(child)
 
-  X.Age[X.Age.isnull()] = X['Age'].dropna().mean()
+#  tmpAge = X['Age']
+#  meanAge = X['Age'].mean()
+#  tmpAge[tmpAge.isnull()] = meanAge
 #  features = features.join(X['Age'])
 
   tmp = X['Embarked']
@@ -89,4 +94,10 @@ lr = LogisticRegression()
 print("logistic regression: ",np.mean(computeScore(lr, X, y)))
 rdf = RandomForestClassifier()
 print("random forest classification: ",np.mean(computeScore(rdf, X, y)))
+grad = GradientBoostingClassifier()
+print("gradient boosting: ",np.mean(computeScore(grad, X, y))) 
+mySVC = SVC()
+print("SVM Classifier: ", np.mean(computeScore(mySVC, X, y)))
+knn = KNeighborsClassifier()
+print("k-NN Classifier: ", np.mean(computeScore(knn, X, y)))
 
